@@ -52,3 +52,6 @@ MOC_DIR = ./build/moc
 OBJECTS_DIR = ./build/obj
 
 QMAKE_CXXFLAGS += -Wno-unused-variable
+
+DISTFILES += \
+    README.md
