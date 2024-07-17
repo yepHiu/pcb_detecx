@@ -219,12 +219,18 @@ void MainWindow::on_btn_scriptInputSearch_clicked()
     process->setInputPath(scriptinput_path);
 }
 
+///
+/// \brief MainWindow::on_captureButton_clicked
+/// 发布拍照信号，然后执行SaveImage函数
 void MainWindow::on_captureButton_clicked()
 {
     cap->capture();//发布捕获信息
     //QMessageBox::information(this,"good","已经截取"); //取消信息提示
 }
 
+///
+/// \brief MainWindow::on_camera_startButton_clicked
+/// 摄像头启动函数
 void MainWindow::on_camera_startButton_clicked()
 {
     if(ui->cameraBox->currentText()=="未检测到相机"){
@@ -260,6 +266,9 @@ void MainWindow::on_camera_startButton_clicked()
 
 }
 
+///
+/// \brief MainWindow::on_camera_stopButton_clicked
+/// 摄像头关闭函数
 void MainWindow::on_camera_stopButton_clicked()
 {
     //停止摄像头
@@ -278,6 +287,11 @@ void MainWindow::on_camera_stopButton_clicked()
     delete ca;
 }
 
+///
+/// \brief MainWindow::SaveImage 保存图像，过程中会二值化图像，又capture函数触发
+/// \param id
+/// \param preview 图像帧
+///
 void MainWindow::SaveImage(int id,const QImage &preview){
     qDebug()<<id;
     qDebug()<<"接收到保存信号";
@@ -324,6 +338,9 @@ void MainWindow::on_serial_sendButton_clicked()
     }
 }
 
+///
+/// \brief MainWindow::on_serial_startButton_clicked
+/// 串口启动函数
 void MainWindow::on_serial_startButton_clicked()
 {
     if(ui->serial_startButton->text()=="开启串口")// 串口未打开
@@ -366,16 +383,21 @@ void MainWindow::on_serial_startButton_clicked()
     }
 }
 
+
+
+// 流程启动
 void MainWindow::on_btn_beltStart_clicked()
 {
-    QByteArray data;
-    data.append(0x7E);
-    data.append(0x01);
-    data.append(0x7E);
-    sp->write(data);
+//    QByteArray data;
+//    data.append(0x7E);
+//    data.append(0x01);
+//    data.append(0x7E);
+//    sp->write(data);
+    TaskStart(sp);
     setLED(ui->lab_LED1,2,16);
 }
 
+// 向前走
 void MainWindow::on_btn_beltStop_clicked()
 {
     QByteArray data;
@@ -386,6 +408,7 @@ void MainWindow::on_btn_beltStop_clicked()
     setLED(ui->lab_LED1,1,16);
 }
 
+// 检测单片机是否在线
 void MainWindow::on_btn_mcuStatus_clicked()
 {
     QByteArray data;
@@ -409,7 +432,9 @@ void MainWindow::ReadData(void){
 }
 
 
-
+///
+/// \brief MainWindow::on_btn_taskStart_clicked
+/// 已经废弃
 void MainWindow::on_btn_taskStart_clicked()
 {
     if(!(ui->camera_startButton->isEnabled())&&!(ui->serial_startButton->isEnabled())){
@@ -449,13 +474,8 @@ void MainWindow::on_btn_taskStart_clicked()
 }
 
 
-
 void MainWindow::on_btn_taskstart_clicked()
 {
-    if(!(ui->camera_startButton->isEnabled())&&!(ui->serial_startButton->isEnabled())){
-        QMessageBox::warning(this,"警告","检查摄像头与串口是否已经开启","Cancel");
-        return;//返回
-    }
 
     QTimer *timer1=new QTimer();
     timer1->setSingleShot(true);
@@ -463,27 +483,74 @@ void MainWindow::on_btn_taskstart_clicked()
     QTimer *timer2 = new QTimer();
     timer2->setSingleShot(true); // 设置为单次触发
 
-    connect(timer1, &QTimer::timeout,this,&MainWindow::on_btn_beltStop_clicked);
-         //第二步 暂停传送带
+    // 检查串口和摄像头是否已经启动
+    if(!(ui->camera_startButton->isEnabled())&&!(ui->serial_startButton->isEnabled())){
+        QMessageBox::warning(this,"警告","检查摄像头与串口是否已经开启","Cancel");
+        return;//返回
+    }
+
+    connect(timer1, &QTimer::timeout,this,&MainWindow::on_btn_beltStop_clicked);//第二步 暂停传送带
 
 //    connect(timer2, &QTimer::timeout, []() {
 //        // 第三步
 //    });
 
-    MainWindow::on_btn_beltStart_clicked(); // 第一步 启动传送带
-    timer1->start(5000);
+    ///////////////NO.1//////////////
+    MainWindow::on_btn_beltStart_clicked();// 发出允许任务启动信息 0x01
+    timer1->start(10000); // 等待执行下一步 单位是ms
 
-    MainWindow::on_captureButton_clicked(); // 拍摄照片
-
-    // 照片处理
-    // 需要输出为bina.jpg 就在脚本所在目录,脚本与可执行文件在同一目录，输出为bina.jpg
-    QProcess bina;
-    bina.start("python3 binarization.py ./capture.jpg");
+    ///////////////NO.2//////////////
+    MainWindow::on_captureButton_clicked(); // 拍摄照片 执行SaveImage函数 保存./capture.jpg
 
     // 将照片移动到脚本输入文件夹
-    QFile binaryfile("./bina.jpg");
-    binaryfile.copy("./input/bina.jpg");
+    QFile binaryfile("./capture.jpg");
+    binaryfile.copy("./input/capture.jpg"); // 保存到脚本的输入路径
 
+    ///////////////NO.3//////////////
     // 运行检测脚本
-    process->startProcess();
+    process->startProcess(); // 脚本运行后会
+}
+
+void MainWindow::on_check_bindebug_clicked(bool checked)
+{
+
+}
+
+
+/////////////////////////////串口发送函数/////////////////////////
+
+///
+/// \brief TaskStart 允许任务启动
+/// \param sp Qt串口指针
+///
+void TaskStart(QSerialPort &sp){
+    QByteArray data;
+    data.append(0x7E);
+    data.append(0x01);
+    data.append(0x7E);
+    sp.write(data);
+}
+
+///
+/// \brief BeltForward 传送带向前移动
+/// \param sp
+///
+void BeltForward(QSerialPort &sp){
+    QByteArray data;
+    data.append(0x7E);
+    data.append(0x02);
+    data.append(0x7E);
+    sp.write(data);
+}
+
+///
+/// \brief BeltBackward 传送带向后移动
+/// \param sp
+///
+void BeltBackward(QSerialPort &sp){
+    QByteArray data;
+    data.append(0x7E);
+    data.append(0x03);
+    data.append(0x7E);
+    sp.write(data);
 }

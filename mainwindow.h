@@ -41,7 +41,6 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
-
 private slots:
     void on_btn_inputSearch_clicked();
 
@@ -81,13 +80,16 @@ private slots:
 
     void on_btn_taskstart_clicked();
 
+    void on_check_bindebug_clicked(bool checked);
+
+
 private:
     Ui::MainWindow *ui;
 
     //QString script_file; // 脚本文件
     QString output_path; // 脚本目标输出文件夹
     QString input_file; // 目标测试文件
-    QString scriptinput_path; //脚本输入路劲
+    QString scriptinput_path; //脚本输入路径
     QString script; // 脚本名
     QString model_path;
 
@@ -106,5 +108,11 @@ private:
     // 串口相关对象地址
     QSerialPort *sp;
 };
+
+void TaskStart(QSerialPort &sp);
+
+void BeltForward(QSerialPort &sp);
+
+void BeltBackward(QSerialPort &sp);
 
 #endif // MAINWINDOW_H
