@@ -13,11 +13,23 @@ pyprocess::pyprocess(const QString &program,const QString &script,const QString 
     _outputpath=outputpath;
     QFileInfo scriptpath(_script);
     QString sss=scriptpath.absolutePath();
-    _modelpath=scriptpath.absolutePath()+QDir::separator()+"yolov5n_1684_f16.bmodel";
+    _modelpath=scriptpath.absolutePath()+QDir::separator()+"yolov5n_1684_f32.bmodel";
     //scriptpath.~QFileInfo();
 
     arguments << _script << "--model" << _modelpath
                 << "--input_path" << _inputpath << "--output_dir" << _outputpath;
+}
+
+pyprocess::pyprocess(const QString &program,const QString &script)
+{
+    qprogram=program;
+
+    _script=script;
+    QFileInfo scriptpath(_script);
+    QString sss=scriptpath.absolutePath();
+    //scriptpath.~QFileInfo();
+
+    arguments << _script;
 }
 
 
@@ -55,7 +67,14 @@ void pyprocess::startProcess(void){
 }
 
 void pyprocess::endProcess(void){
-
+    if (process.state() == QProcess::Running) {
+        process.terminate();
+        if (!process.waitForFinished(500)) { // wait for 3 seconds
+            process.kill();
+            process.waitForFinished();
+        }
+    }
+    qDebug() << "Process ended";
 }
 
 void pyprocess::setInputPath(const QString &path){

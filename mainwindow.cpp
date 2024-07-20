@@ -70,9 +70,10 @@ MainWindow::MainWindow(QWidget *parent) :
     // 对象初始化 文件夹检测对象
     watcher = new filewatch(output_path,ui->lab_OutputImage);
     process = new pyprocess("python3",script,scriptinput_path,output_path);
-    js = new jsonresult("./position.json",ui->table_detect);
+    binprocess = new pyprocess("python3","./test_cam.py");
+    js = new jsonresult("./yolo/yolo5n_save/capture.json",ui->table_detect);
     //js->loadJsonIntoTable();
-    jsonwatch = new filewatch("./json/",[this](void){
+    jsonwatch = new filewatch("./yolo/yolo5n_save/",[this](void){
         this->js->loadJsonIntoTable();
     });
 
@@ -238,6 +239,7 @@ void MainWindow::on_camera_startButton_clicked()
         return;
     }
 
+
     ca = new QCamera(ui->cameraBox->currentText().toUtf8(),this);//构造摄像头对象
     cap = new QCameraImageCapture(ca,this);//构造截屏对象
     QObject::connect(cap,&QCameraImageCapture::imageCaptured,this,&MainWindow::SaveImage);//连接截屏信号和显示截屏图像的槽
@@ -300,6 +302,11 @@ void MainWindow::SaveImage(int id,const QImage &preview){
     // 将QImage转换为灰度图像
    QImage grayImage = preview.convertToFormat(QImage::Format_Grayscale8);
 
+   // 裁剪图像的矩形区域 (x, y, width, height)
+    QRect cropRect(190, 200, 400, 400); // 替换为你想要裁剪的区域
+
+   // 裁剪图像
+   grayImage = grayImage.copy(cropRect);
    // 二值化处理
    QString binary_text=ui->txt_binary->toPlainText();
    int threshold = binary_text.toInt(); // 设置阈值，可以根据需要调整
@@ -317,8 +324,9 @@ void MainWindow::SaveImage(int id,const QImage &preview){
 
 
     QPixmap pix = QPixmap::fromImage(grayImage);//把QImage转换成QPixmap
+    ui->lab_inputImage->setPixmap(pix.scaled(ui->lab_inputImage->size(), Qt::KeepAspectRatio));
     QString picpath = QString("./capture.jpg").arg(id);//保存图片
-    pix.save(picpath);
+    pix.save(picpath,"JPG",100);
 }
 
 void MainWindow::on_serial_sendButton_clicked()
@@ -384,7 +392,6 @@ void MainWindow::on_serial_startButton_clicked()
 }
 
 
-
 // 流程启动
 void MainWindow::on_btn_beltStart_clicked()
 {
@@ -393,7 +400,7 @@ void MainWindow::on_btn_beltStart_clicked()
 //    data.append(0x01);
 //    data.append(0x7E);
 //    sp->write(data);
-    TaskStart(sp);
+    TaskStart(*sp);
     setLED(ui->lab_LED1,2,16);
 }
 
@@ -433,47 +440,8 @@ void MainWindow::ReadData(void){
 
 
 ///
-/// \brief MainWindow::on_btn_taskStart_clicked
-/// 已经废弃
-void MainWindow::on_btn_taskStart_clicked()
-{
-    if(!(ui->camera_startButton->isEnabled())&&!(ui->serial_startButton->isEnabled())){
-        QMessageBox::warning(this,"警告","检查摄像头与串口是否已经开启","Cancel");
-        return;//返回
-    }
-
-    QString str_forward_time=ui->txt_mvtime->toPlainText();
-    int forward_time=str_forward_time.toInt();
-
-    QTimer *timer1=new QTimer();
-    timer1->setSingleShot(true);
-
-    QTimer *timer2 = new QTimer();
-    timer2->setSingleShot(true); // 设置为单次触发
-
-    connect(timer1, &QTimer::timeout,this,&MainWindow::on_btn_beltStop_clicked);
-         //第二步 暂停传送带
-
-//    connect(timer2, &QTimer::timeout, []() {
-//        // 第三步
-//    });
-
-    MainWindow::on_btn_beltStart_clicked(); // 第一步 启动传送带
-    timer1->start(forward_time);
-
-    MainWindow::on_captureButton_clicked(); // 拍摄照片
-    // 照片处理
-
-    // 将照片移动到脚本输入文件夹
-    QFile binaryfile("./capture.jpg");
-    binaryfile.copy("./input/capture.jpg");
-
-    // 运行检测脚本
-    process->startProcess();
-
-}
-
-
+/// \brief MainWindow::on_btn_taskstart_clicked
+/// 任务流程函数
 void MainWindow::on_btn_taskstart_clicked()
 {
 
@@ -484,12 +452,12 @@ void MainWindow::on_btn_taskstart_clicked()
     timer2->setSingleShot(true); // 设置为单次触发
 
     // 检查串口和摄像头是否已经启动
-    if(!(ui->camera_startButton->isEnabled())&&!(ui->serial_startButton->isEnabled())){
+    if(!ui->camera_startButton->isEnabled() || !ui->serial_startButton->isEnabled()){
         QMessageBox::warning(this,"警告","检查摄像头与串口是否已经开启","Cancel");
         return;//返回
     }
 
-    connect(timer1, &QTimer::timeout,this,&MainWindow::on_btn_beltStop_clicked);//第二步 暂停传送带
+    //connect(timer1, &QTimer::timeout,this,&MainWindow::on_btn_beltStop_clicked);//第二步 暂停传送带
 
 //    connect(timer2, &QTimer::timeout, []() {
 //        // 第三步
@@ -502,13 +470,28 @@ void MainWindow::on_btn_taskstart_clicked()
     ///////////////NO.2//////////////
     MainWindow::on_captureButton_clicked(); // 拍摄照片 执行SaveImage函数 保存./capture.jpg
 
+    MainWindow::on_btn_clearinputDir_clicked();// 清空输入目录
+
+    delay(1000); // 这个延时是有用的
     // 将照片移动到脚本输入文件夹
     QFile binaryfile("./capture.jpg");
     binaryfile.copy("./input/capture.jpg"); // 保存到脚本的输入路径
 
     ///////////////NO.3//////////////
     // 运行检测脚本
+    process->setInputPath("./input/");
+    process->setOutputPath("./output/");
     process->startProcess(); // 脚本运行后会
+    process->endProcess();
+
+    int rowCount = ui->table_detect->rowCount();
+    qDebug() << "Row count:" << rowCount;
+    if(rowCount>=1){
+        BeltBackward(*sp); // 有缺陷向后走
+    }
+    else{
+        BeltForward(*sp);// 没缺陷向前走
+    }
 }
 
 void MainWindow::on_check_bindebug_clicked(bool checked)
@@ -553,4 +536,33 @@ void BeltBackward(QSerialPort &sp){
     data.append(0x03);
     data.append(0x7E);
     sp.write(data);
+}
+
+void MainWindow::on_btn_clearinputDir_clicked()
+{
+    QString directoryPath=ui->txt_scriptInputPath->toPlainText();
+    QDir dir(directoryPath);
+        if (!dir.exists()) {
+            qDebug() << "Directory does not exist:" << directoryPath;
+            return;
+        }
+        // 获取目录中的所有文件
+        QStringList files = dir.entryList(QDir::Files);
+        // 遍历并删除每个文件
+        foreach (QString file, files) {
+            if (!dir.remove(file)) {
+                qDebug() << "Failed to remove file:" << file;
+            }
+        }
+        qDebug() << "All files removed from directory:" << directoryPath;
+}
+
+///
+/// \brief delay 延时函数
+/// \param milliseconds
+///
+void delay(int milliseconds) {
+    QEventLoop loop;
+    QTimer::singleShot(milliseconds, &loop, &QEventLoop::quit);
+    loop.exec();
 }

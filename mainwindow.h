@@ -74,14 +74,16 @@ private slots:
 
     void ReadData(void);
 
-    void on_btn_taskStart_clicked();
+    //void on_btn_taskStart_clicked();
 
-    void on_pushButton_2_clicked();
+    //void on_pushButton_2_clicked();
 
     void on_btn_taskstart_clicked();
 
     void on_check_bindebug_clicked(bool checked);
 
+
+    void on_btn_clearinputDir_clicked();
 
 private:
     Ui::MainWindow *ui;
@@ -95,6 +97,7 @@ private:
 
     filewatch *watcher;
     pyprocess *process;
+    pyprocess *binprocess;
     filewatch *jsonwatch;
     jsonresult *js;
 
@@ -115,4 +118,5 @@ void BeltForward(QSerialPort &sp);
 
 void BeltBackward(QSerialPort &sp);
 
+void delay(int milliseconds);
 #endif // MAINWINDOW_H

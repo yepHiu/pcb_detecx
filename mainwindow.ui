@@ -172,6 +172,13 @@
      </rect>
     </property>
     <layout class="QGridLayout" name="script_setting">
+     <item row="0" column="0" colspan="2">
+      <widget class="QLabel" name="lab_scriptPath">
+       <property name="text">
+        <string>检测脚本的位置：</string>
+       </property>
+      </widget>
+     </item>
      <item row="2" column="0">
       <widget class="QPushButton" name="btn_scriptSearch">
        <property name="text">
@@ -242,13 +249,6 @@
        </property>
       </widget>
      </item>
-     <item row="6" column="0" colspan="2">
-      <widget class="QPushButton" name="btn_scriptInputSearch">
-       <property name="text">
-        <string>浏览</string>
-       </property>
-      </widget>
-     </item>
      <item row="4" column="0" colspan="2">
       <widget class="QLabel" name="lab_scriptInputPath">
        <property name="text">
@@ -256,10 +256,17 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="0" colspan="2">
-      <widget class="QLabel" name="lab_scriptPath">
+     <item row="6" column="0">
+      <widget class="QPushButton" name="btn_scriptInputSearch">
        <property name="text">
-        <string>检测脚本的位置：</string>
+        <string>浏览</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="1">
+      <widget class="QPushButton" name="btn_clearinputDir">
+       <property name="text">
+        <string>清空输入目录</string>
        </property>
       </widget>
      </item>
@@ -579,7 +586,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>1140</x>

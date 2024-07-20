@@ -15,6 +15,8 @@ class pyprocess
 public:
     pyprocess(const QString &program,const QString &script,const QString &iuputpath,QString &outputpath);
 
+    pyprocess(const QString &program,const QString &script);
+
     ~pyprocess();
 
     void startProcess(void);
